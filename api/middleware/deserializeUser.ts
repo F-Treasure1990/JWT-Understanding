@@ -3,41 +3,46 @@ import { getSession } from "../src/db"
 import { signJWT, verifyJWT } from "../src/utils/jwt.utils"
 
 export function deserializeUser(req: Request, res: Response, next: NextFunction) {
-  const { accessToken, refreshToken } = req.cookies
+  const { accessToken, refreshToken } = req.cookies;
 
   if (!accessToken) {
-    return next()
+    return next();
   }
 
-  const { payload, expired } = verifyJWT(accessToken)
-  //for vald access token
+  const { payload, expired } = verifyJWT(accessToken);
+
+  // For a valid access token
   if (payload) {
-    //@ts-ignore
-    req.user = payload
+    // @ts-ignore
+    req.user = payload;
+    return next();
   }
-  // exspired but valid access token
-  const { payload: refresh } = expired && refreshToken ? verifyJWT(refreshToken) : { payload: null }
+
+  // expired but valid access token
+
+  const { payload: refresh } =
+    expired && refreshToken ? verifyJWT(refreshToken) : { payload: null };
 
   if (!refresh) {
-    return next()
+    return next();
   }
-  //@ts-ignore
+
+  // @ts-ignore
   const session = getSession(refresh.sessionId);
 
   if (!session) {
-    return next()
+    return next();
   }
 
-  const newAccessToken = signJWT(session, '5s')
+  const newAccessToken = signJWT(session, "5s");
 
   res.cookie("accessToken", newAccessToken, {
-    maxAge: 30000,
-    httpOnly: true
-  })
+    maxAge: 300000, // 5 minutes
+    httpOnly: true,
+  });
 
-  //@ts-ignore
-  req.user = verifyJWT(newAccessToken).payload
+  // @ts-ignore
+  req.user = verifyJWT(newAccessToken).payload;
 
-  return next()
-
+  return next();
 }

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { createSession, getUser } from '../db'
+import { createSession, getUser, invalidateSession } from '../db'
 import { signJWT, verifyJWT } from '../utils/jwt.utils'
 // login handler
 export function createSessionHandler(req: Request, res: Response) {
@@ -13,7 +13,7 @@ export function createSessionHandler(req: Request, res: Response) {
   const session = createSession(email, user.name)
 
   //create access token 
-  const accessToken = signJWT({ email: user.email, name: user.name }, "5m")
+  const accessToken = signJWT({ email: user.email, name: user.name, sessionId: session.sessionId }, "5m")
   const refreshToken = signJWT({ sessionId: session.sessionId }, "1y")
   //set access token in cookie
   res.cookie("accessToken", accessToken, {
@@ -36,10 +36,17 @@ export function getSessionHander(req: Request, res: Response) {
 }
 // log out handler
 export function deleteSessionHandler(req: Request, res: Response) {
-  res.cookie("tutorialToken", "", {
+  res.cookie("accessToken", "", {
     maxAge: 0,
     httpOnly: true
   })
 
-  res.send({ success: true })
+  res.cookie("refreshToken", "", {
+    maxAge: 0,
+    httpOnly: true
+  })
+  //@ts-ignore
+  const session = invalidateSession(req.user.sessionId)
+
+  res.send(session)
 }
